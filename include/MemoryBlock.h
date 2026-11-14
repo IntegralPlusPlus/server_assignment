@@ -11,6 +11,12 @@ protected:
     int refCount;
     int* data;
 public:
+    virtual ~MemoryBlock();
+    MemoryBlock(const MemoryBlock& other);
+    MemoryBlock& operator=(const MemoryBlock& other);
+    MemoryBlock(MemoryBlock&& other);
+    MemoryBlock& operator=(MemoryBlock&& other);   
+
     MemoryBlock(size_t size);
     virtual IdleAction onLastRelease() const = 0;
     virtual MemoryBlock* clone() const = 0;
