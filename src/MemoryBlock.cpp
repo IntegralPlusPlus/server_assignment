@@ -1,29 +1,30 @@
 #include <cstdint>
 #include "MemoryBlock.h"
 
-MemoryBlock::MemoryBlock(size_t size) {
-    this->size = size;
-    this->data = new int[size]();
-    this->refCount = 0;
+MemoryBlock::MemoryBlock(size_t size)
+    : size(size),
+      refCount(0),
+      data(new int[size]())
+{
 }
 
-MemoryBlock::MemoryBlock(const MemoryBlock& other) {
-    this->size = other.size;
-    this->refCount = 0;
-    delete[] this->data;
-
-    this->data = new int[size];
-
+MemoryBlock::MemoryBlock(const MemoryBlock& other)
+    : size(other.size),
+      refCount(0),
+      data(new int[other.size]) {
     for (size_t i = 0; i < this->size; ++i) {
         data[i] = other.readFromBlock(i);
     }
 }
 
 MemoryBlock& MemoryBlock::operator=(const MemoryBlock& other) {
+    if (this == &other) { // a = a
+        return *this;
+    }
+
     this->size = other.size;
     this->refCount = 0;
-    delete[] this->data;
-
+    delete[] data;
     this->data = new int[size];
 
     for (size_t i = 0; i < this->size; ++i) {
@@ -33,19 +34,24 @@ MemoryBlock& MemoryBlock::operator=(const MemoryBlock& other) {
     return *this;
 }
 
-MemoryBlock::MemoryBlock(MemoryBlock&& other) {
-    this->size = other.size;
-    this->refCount = 0;
-    delete[] this->data;
-
-    this->data = other.data;
+MemoryBlock::MemoryBlock(MemoryBlock&& other)
+    : size(other.size),
+      refCount(0),
+      data(other.data) {
+    other.data = nullptr;
+    other.size = 0;
+    other.refCount = 0;
 }
 
 MemoryBlock& MemoryBlock::operator=(MemoryBlock&& other) {
     this->size = other.size;
     this->refCount = 0;
+    delete[] data;
     this->data = other.data;
-    delete[] this->data;
+
+    other.data = nullptr;
+    other.size = 0;
+    other.refCount = 0;
 
     return *this;
 }

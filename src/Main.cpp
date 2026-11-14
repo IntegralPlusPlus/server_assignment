@@ -12,9 +12,14 @@ int main(int argc, char** argv){
     Server s(argv[1]);
     s.serve();*/
 
-    KVBlock mb(5);
+    KVBlock b(5);
+    b.writeToBlock(1, 5);
     
-    cout << mb.readFromBlock(1) << endl;
+    KVBlock a(b);
+    
+    b.writeToBlock(1, 7);
+
+    cout << a.readFromBlock(1) << endl;
 
     return 0;
 }
