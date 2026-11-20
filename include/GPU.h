@@ -1,9 +1,12 @@
 #ifndef GPU_H_
 #define GPU_H_
 
+#include "Request.h"
+
 #include <string>
 #include <cstddef>
 #include <vector>
+#include <unordered_map>
 
 struct PrefixMatch {
     std::size_t matchedTokens;
@@ -34,6 +37,8 @@ private:
     std::size_t blocksNum;
     std::size_t blockSize;
     std::vector<MemoryBlock*> memory;
+    std::unordered_map<int, std::size_t> reservs;
+    std::size_t reservatedBlocks;
 };
 
 #endif
