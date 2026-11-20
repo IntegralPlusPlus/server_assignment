@@ -161,3 +161,14 @@ void GPU::writeToBlock(std::size_t blockId, std::size_t offset, int value) {
 int GPU::readFromBlock(std::size_t blockId, std::size_t offset) const {
     return this->memory[blockId]->readFromBlock(offset);
 }
+
+void GPU::release(std::size_t slot) {
+    IdleAction action = this->memory[slot]->release();
+
+    if (action == IdleAction::Destroy || 
+        (this->memory[slot]->getRefCount() == 0 && prefixes[slot] == std::pair<std::vector<std::string>, std::string>())) {
+        delete memory[slot];
+        memory[slot] = nullptr;
+        prefixes[slot] = std::pair<std::vector<std::string>, std::string>();
+    }
+}
