@@ -3,7 +3,6 @@
 
 PrefixMatch::PrefixMatch():
     matchedTokens(0) {
-
 }
 
 GPU::GPU(std::size_t blocksNum, std::size_t blockSize):
@@ -166,9 +165,65 @@ void GPU::release(std::size_t slot) {
     IdleAction action = this->memory[slot]->release();
 
     if (action == IdleAction::Destroy || 
-        (this->memory[slot]->getRefCount() == 0 && prefixes[slot] == std::pair<std::vector<std::string>, std::string>())) {
-        delete memory[slot];
-        memory[slot] = nullptr;
-        prefixes[slot] = std::pair<std::vector<std::string>, std::string>();
+        (this->memory[slot]->getRefCount() == 0 && this->prefixes[slot] == std::pair<std::vector<std::string>, std::string>())) {
+        delete this->memory[slot];
+        this->memory[slot] = nullptr;
+        this->prefixes[slot] = std::pair<std::vector<std::string>, std::string>();
+    }
+}
+
+std::pair<std::vector<std::string>, std::string> GPU::getPrefix(std::size_t slot) const {
+    return this->prefixes[slot];
+}
+
+MemoryBlock* GPU::getMemoryBlock(std::size_t slot) const {
+    return this->memory[slot];
+}
+
+void GPU::copyMemoryFromOtherGPU(const GPU& other, const std::vector<std::size_t>& blocks) {
+    for (auto blockCopy : blocks) {
+        std::pair<std::vector<std::string>, std::string> prefix = other.getPrefix(blockCopy);
+
+        std::size_t slot = 0, lowestNull = this->blocksNum + 1, lowestInactive = this->blocksNum + 1;
+        bool slotFound = false;
+        for (; slot < this->blocksNum; ++slot) {
+            if (prefix == this->prefixes[slot]) {   
+                slotFound = true;
+                break;        
+            } 
+            
+            if (this->memory[slot] == nullptr && lowestNull == this->blocksNum + 1) {
+                lowestNull = slot;
+            } else if (this->memory[slot] != nullptr && 
+                    this->memory[slot]->getRefCount() == 0 && 
+                    lowestInactive == this->blocksNum + 1) {
+                // defends against inserts
+                bool updateLowest = true;
+                for (auto sourceSlot : blocks) {
+                    if (this->prefixes[slot] == other.getPrefix(sourceSlot)) {
+                        updateLowest = false;
+                        break;
+                    }
+                }
+                
+                if (updateLowest) lowestInactive = slot;
+            }
+        }
+
+        if (slotFound) {
+            continue;
+        } else {
+            MemoryBlock* copy = other.getMemoryBlock(blockCopy)->clone();
+            std::size_t lowestInd;
+            if (lowestNull != this->blocksNum + 1) {
+                lowestInd = lowestNull;
+            } else {
+                lowestInd = lowestInactive;
+                delete this->memory[lowestInactive];
+            }
+
+            this->prefixes[lowestInd] = prefix;
+            this->memory[lowestInd] = copy;
+        }
     }
 }
