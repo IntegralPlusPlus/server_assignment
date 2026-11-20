@@ -81,6 +81,14 @@ IdleAction MemoryBlock::release() {
     }
 }
 
+size_t MemoryBlock::getSize() const {
+    return this->size;
+}
+
+int MemoryBlock::getRefCount() const {
+    return this->refCount;
+}
+
 KVBlock::KVBlock(size_t size): MemoryBlock(size) {
 }
 
