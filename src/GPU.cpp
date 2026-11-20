@@ -45,11 +45,37 @@ void GPU::reserve(std::size_t n, const Request& request) {
 
 void GPU::unreserve(std::size_t n, const Request& request) {
     int id = (&request)->getId();
-    if (this->reservs[id] >= n) {
+    if (this->reservs[id] > n) {
         this->reservs[id] -= n;
         this->reservatedBlocks -= n;
     } else {
         this->reservatedBlocks -= this->reservs[id];
         this->reservs[id] = 0;
     }
+}
+
+std::size_t GPU::allocateBlock(const Request& request) {
+    std::size_t i = 0, slot = this->blocksNum, lowestIdle = this->blocksNum;
+    int id = request.getId();
+    
+    for (auto element : this->memory) {
+        if (element == nullptr) {
+            slot = i;
+            break;
+        } else if ((*element).getRefCount() == 0 && lowestIdle == this->blocksNum) {
+            lowestIdle = i;
+        }
+
+        i++;
+    }
+
+    if (slot == this->blocksNum) {
+        slot = lowestIdle;
+    }
+
+    request.allocateOneBlock(*this, slot);
+    this->reservatedBlocks--;
+    this->reservs[id]--;
+
+    return slot;
 }
