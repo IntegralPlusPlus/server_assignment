@@ -7,8 +7,8 @@
 #include <cstddef>
 #include <vector>
 #include <unordered_map>
-
 struct PrefixMatch {
+    PrefixMatch();
     std::size_t matchedTokens;
     std::vector<std::size_t> blockIds;
 };
@@ -39,6 +39,7 @@ private:
     std::vector<MemoryBlock*> memory;
     std::unordered_map<int, std::size_t> reservs;
     std::size_t reservatedBlocks;
+    std::vector<std::pair<std::vector<std::string>, std::string> > prefixes;
 };
 
 #endif

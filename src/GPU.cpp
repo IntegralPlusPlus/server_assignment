@@ -1,11 +1,17 @@
 #include "GPU.h"
 #include "MemoryBlock.h"
 
+PrefixMatch::PrefixMatch():
+    matchedTokens(0) {
+
+}
+
 GPU::GPU(std::size_t blocksNum, std::size_t blockSize):
         blocksNum(blocksNum), 
         blockSize(blockSize),
         reservatedBlocks(0)  {
     this->memory.resize(blocksNum);
+    this->prefixes.resize(blocksNum);
 }
 
 std::size_t GPU::availableSlots() const {
@@ -71,6 +77,8 @@ std::size_t GPU::allocateBlock(const Request& request) {
 
     if (slot == this->blocksNum) {
         slot = lowestIdle;
+        delete this->memory[slot];
+        this->prefixes[slot] = {};
     }
 
     request.allocateOneBlock(*this, slot);
@@ -78,4 +86,78 @@ std::size_t GPU::allocateBlock(const Request& request) {
     this->reservs[id]--;
 
     return slot;
+}
+
+void GPU::addMemoryBlock(const GenerativeRequest& request, std::size_t slot) {
+    this->memory[slot] = new KVBlock(this->blockSize);
+}
+
+void GPU::addMemoryBlock(const EmbeddingRequest& request, std::size_t slot) {
+    this->memory[slot] = new EmbeddingWorkspace(this->blockSize);
+}
+
+void GPU::assignPrefixToBlock(std::size_t block, const std::vector<std::string>& prefixTokens, const std::string& modelId) {
+    for (auto prefix : prefixes) {
+        if (prefix.first == prefixTokens && prefix.second == modelId) {
+            return;
+        }
+    }
+
+    prefixes[block] = std::make_pair(prefixTokens, modelId);
+}
+
+PrefixMatch GPU::findLongestCachedPrefix(const std::string& modelId, std::size_t embeddingSize,
+                                        const std::vector<std::string>& promptTokens) const {
+    PrefixMatch prefix;
+    std::size_t tokens = this->blockSize / embeddingSize;
+    std::vector<std::size_t> slotsPerTokens(promptTokens.size() / tokens + 1);
+
+    for (std::size_t block = 0; block < this->blocksNum; ++block) {
+        if (this->prefixes[block].second == modelId 
+            && this->prefixes[block].first.size() != 0
+            && this->prefixes[block].first.size() <= promptTokens.size()) {
+            
+            std::size_t degree = 0;
+            while ((degree + 1) * tokens <= this->prefixes[block].first.size()) {
+                bool updateDegree = true;
+                for (std::size_t i = 0; i < tokens; ++i) {
+                    if (this->prefixes[block].first[degree * tokens + i] != promptTokens[degree * tokens + i]) {
+                        updateDegree = false;
+                        break;
+                    }
+                }
+                
+                if (!updateDegree) break;
+
+                degree++;
+            }
+
+            if (degree * tokens == this->prefixes[block].first.size()) {
+                slotsPerTokens[degree] = block + 1;
+            }
+        }
+    }
+
+    for (int i = 1; i < slotsPerTokens.size(); ++i) {
+        if (slotsPerTokens[i] == 0) {
+            break;
+        } else {
+            prefix.matchedTokens = i * tokens;
+            prefix.blockIds.push_back(slotsPerTokens[i] - 1);
+        }
+    }
+
+    return prefix;
+}
+
+void GPU::acquire(std::size_t slot) {
+    this->memory[slot]->acquire();
+}
+
+void GPU::writeToBlock(std::size_t blockId, std::size_t offset, int value) {
+    this->memory[blockId]->writeToBlock(offset, value);
+}
+
+int GPU::readFromBlock(std::size_t blockId, std::size_t offset) const {
+    return this->memory[blockId]->readFromBlock(offset);
 }
