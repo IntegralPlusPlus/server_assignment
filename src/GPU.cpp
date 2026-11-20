@@ -13,6 +13,65 @@ GPU::GPU(std::size_t blocksNum, std::size_t blockSize):
     this->prefixes.resize(blocksNum);
 }
 
+GPU::GPU(const GPU& other):
+        blocksNum(other.getBlocksNum()),
+        blockSize(other.getBlockSize()),
+        reservs(other.getReservs()),
+        reservatedBlocks(other.getReservatedBlocks()) {
+    this->memory.resize(this->blocksNum);
+    this->prefixes.resize(this->blocksNum);
+
+    for (std::size_t slot = 0; slot < this->blocksNum; ++slot) {
+        if (other.getMemoryBlock(slot) != nullptr) {
+            this->memory[slot] = other.getMemoryBlock(slot)->clone();
+            this->memory[slot]->setRefCount(other.getMemoryBlock(slot)->getRefCount());
+        } else {
+            this->memory[slot] = nullptr;
+        }
+
+        this->prefixes[slot] = other.getPrefix(slot);
+    }
+}
+
+GPU& GPU::operator=(const GPU& other) {
+    if (this == &other) {
+        return *this;
+    }
+
+    this->blocksNum = other.getBlocksNum();
+    this->blockSize = other.getBlockSize();
+    this->reservs = other.getReservs();
+    this->reservatedBlocks = other.getReservatedBlocks();
+
+    for (auto* block : this->memory) {
+        delete block;
+    }
+    
+    this->memory.clear();
+
+    this->memory.resize(this->blocksNum);
+    this->prefixes.resize(this->blocksNum);
+
+    for (std::size_t slot = 0; slot < this->blocksNum; ++slot) {
+        if (other.getMemoryBlock(slot) != nullptr) {
+            this->memory[slot] = other.getMemoryBlock(slot)->clone();
+            this->memory[slot]->setRefCount(other.getMemoryBlock(slot)->getRefCount());
+        } else {
+            this->memory[slot] = nullptr;
+        }
+
+        this->prefixes[slot] = other.getPrefix(slot);
+    }
+
+    return *this;
+}
+
+GPU::~GPU() {
+    for (auto memoryBlock : this->memory) {
+        delete memoryBlock;
+    }
+}
+
 std::size_t GPU::availableSlots() const {
     std::size_t numSlots = 0; 
     for (auto element : this->memory) {
@@ -178,6 +237,22 @@ std::pair<std::vector<std::string>, std::string> GPU::getPrefix(std::size_t slot
 
 MemoryBlock* GPU::getMemoryBlock(std::size_t slot) const {
     return this->memory[slot];
+}
+
+std::size_t GPU::getBlocksNum() const {
+    return this->blocksNum;
+}
+
+std::size_t GPU::getBlockSize() const {
+    return this->blockSize;
+}
+
+std::unordered_map<int, std::size_t> GPU::getReservs() const {
+    return this->reservs;
+}
+
+std::size_t GPU::getReservatedBlocks() const {
+    return this->reservatedBlocks;
 }
 
 void GPU::copyMemoryFromOtherGPU(const GPU& other, const std::vector<std::size_t>& blocks) {

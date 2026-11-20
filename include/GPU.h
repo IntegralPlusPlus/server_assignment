@@ -20,6 +20,10 @@ class MemoryBlock;
 class GPU{
 public:
     GPU(std::size_t blocksNum, std::size_t blockSize);
+    GPU(const GPU& other);
+    GPU& operator=(const GPU& other);
+    ~GPU();
+
     std::size_t availableSlots() const;
     std::size_t getBlocksForMemory(std::size_t memory) const;
     void reserve(std::size_t n, const Request& request);
@@ -45,6 +49,10 @@ private:
 
     std::pair<std::vector<std::string>, std::string> getPrefix(std::size_t slot) const;
     MemoryBlock* getMemoryBlock(std::size_t slot) const;
+    std::size_t getBlocksNum() const;
+    std::size_t getBlockSize() const;
+    std::unordered_map<int, std::size_t> getReservs() const;
+    std::size_t getReservatedBlocks() const;
 };
 
 #endif

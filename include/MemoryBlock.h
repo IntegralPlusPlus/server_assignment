@@ -27,6 +27,7 @@ public:
 
     size_t getSize() const;
     int getRefCount() const;
+    void setRefCount(int refCount);
 };
 
 class KVBlock: public MemoryBlock{

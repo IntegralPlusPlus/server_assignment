@@ -89,6 +89,10 @@ int MemoryBlock::getRefCount() const {
     return this->refCount;
 }
 
+void MemoryBlock::setRefCount(int refCount) {
+    this->refCount = refCount;
+}
+
 KVBlock::KVBlock(size_t size): MemoryBlock(size) {
 }
 
