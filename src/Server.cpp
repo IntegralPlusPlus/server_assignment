@@ -3,6 +3,7 @@
 #include <stdexcept>
 
 #include "Model.h"
+#include "SchedulingPolicy.h"
 #include "Server.h"
 
 using namespace std;
@@ -16,6 +17,8 @@ Server::Server(std::string configPath) : policy(NULL), currentCycle(0)
     {
         models.push_back(new Model(modelConfig.id, modelConfig.embeddingSize));
     }
+
+    gpus.reserve(config.gpus.size());
     for (const GPUConfig gpuConfig : config.gpus)
     {
         gpus.push_back(GPU(gpuConfig.memoryBytes / config.blockSize, config.blockSize));
@@ -33,7 +36,11 @@ Server::Server(std::string configPath) : policy(NULL), currentCycle(0)
                 break;
             }
         }
-
+        if (model == NULL)
+        {
+            /* I assume this can't be true but just in case */
+            continue;
+        }
         switch (r.type)
         {
         case RequestType::Generative:
@@ -45,6 +52,19 @@ Server::Server(std::string configPath) : policy(NULL), currentCycle(0)
                 new EmbeddingRequest(r.id, *model, r.admissionCycle, r.prompt));
             break;
         }
+    }
+
+    if (config.policy == "arrivalOrder")
+    {
+        policy = new ArrivalOrderPolicy();
+    }
+    else if (config.policy == "shortestJob")
+    {
+        policy = new ShortestJobPolicy();
+    }
+    else if (config.policy == "longestPrefix")
+    {
+        policy = new LongestPrefixPolicy();
     }
 }
 
