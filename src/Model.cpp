@@ -104,3 +104,11 @@ void Model::generateTokenEmbedding(const std::vector<std::string> &tokens, GPU &
         gpu.writeToBlock(slot, offset + i, static_cast<int>(value % 2001ULL) - 1000);
     }
 }
+
+std::size_t Model::getEmbeddingSize() const {
+    return this->embeddingSize;
+}
+
+std::string Model::getModelId() const {
+    return this->modelId;
+}

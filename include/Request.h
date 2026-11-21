@@ -44,6 +44,10 @@ public:
     GenerativeRequest(int id, const Model& model, int admissionCycle, std::string prompt, std::string scriptedOutput,
     std::size_t maxOutputTokens);
     virtual bool finished() const;
+    virtual std::vector<std::string> getCacheableTokens() const;
+    virtual void allocateOneBlock(GPU& gpu, std::size_t slot) const;
+    virtual std::size_t getMaxNeededMemory() const;
+    virtual std::size_t getNeededMemory(const GPU& gpu) const;
 };
 
 class EmbeddingRequest: public Request{
