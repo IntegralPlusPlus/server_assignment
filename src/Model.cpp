@@ -105,10 +105,12 @@ void Model::generateTokenEmbedding(const std::vector<std::string> &tokens, GPU &
     }
 }
 
-std::size_t Model::getEmbeddingSize() const {
+std::size_t Model::getEmbeddingSize() const
+{
     return this->embeddingSize;
 }
 
-std::string Model::getModelId() const {
+std::string Model::getModelId() const
+{
     return this->modelId;
 }
