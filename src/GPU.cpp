@@ -66,6 +66,63 @@ GPU& GPU::operator=(const GPU& other) {
     return *this;
 }
 
+GPU::GPU(GPU&& other):
+        blocksNum(other.blocksNum),
+        blockSize(other.blockSize),
+        reservs(other.reservs),
+        reservatedBlocks(other.reservatedBlocks) {
+    this->memory.resize(this->blocksNum);
+    this->prefixes.resize(this->blocksNum);
+
+    for (std::size_t slot = 0; slot < this->blocksNum; ++slot) {
+        this->memory[slot] = other.memory[slot];
+        this->prefixes[slot] = other.prefixes[slot];
+        
+        other.memory[slot] = nullptr;
+        other.prefixes[slot] = std::pair<std::vector<std::string>, std::string>();
+    }
+
+    other.memory.clear();
+    other.prefixes.clear();
+    other.blocksNum = 0;
+    other.reservs = std::unordered_map<int, std::size_t>();
+    other.reservatedBlocks = 0;
+}
+
+GPU& GPU::operator=(GPU&& other) {
+    if (this == &other) {
+        return *this;
+    }
+
+    this->blocksNum = other.blocksNum;
+    this->blockSize = other.blockSize;
+    this->reservs = other.reservs;
+    this->reservatedBlocks = other.reservatedBlocks;
+
+    for (auto* block : this->memory) {
+        delete block;
+    }
+
+    this->memory.resize(this->blocksNum);
+    this->prefixes.resize(this->blocksNum);
+
+    for (std::size_t slot = 0; slot < this->blocksNum; ++slot) {
+        this->memory[slot] = other.memory[slot];
+        this->prefixes[slot] = other.prefixes[slot];
+        
+        other.memory[slot] = nullptr;
+        other.prefixes[slot] = std::pair<std::vector<std::string>, std::string>();
+    }
+
+    other.memory.clear();
+    other.prefixes.clear();
+    other.blocksNum = 0;
+    other.reservs = std::unordered_map<int, std::size_t>();
+    other.reservatedBlocks = 0;
+
+    return *this;
+}
+
 GPU::~GPU() {
     for (auto memoryBlock : this->memory) {
         delete memoryBlock;
@@ -196,7 +253,7 @@ PrefixMatch GPU::findLongestCachedPrefix(const std::string& modelId, std::size_t
         }
     }
 
-    for (int i = 1; i < slotsPerTokens.size(); ++i) {
+    for (std::size_t i = 1; i < slotsPerTokens.size(); ++i) {
         if (slotsPerTokens[i] == 0) {
             break;
         } else {
@@ -253,6 +310,10 @@ std::unordered_map<int, std::size_t> GPU::getReservs() const {
 
 std::size_t GPU::getReservatedBlocks() const {
     return this->reservatedBlocks;
+}
+
+void GPU::setNullPtrMemoryBlock(std::size_t slot) {
+    this->memory[slot] = nullptr;
 }
 
 void GPU::copyMemoryFromOtherGPU(const GPU& other, const std::vector<std::size_t>& blocks) {

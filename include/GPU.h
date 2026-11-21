@@ -22,6 +22,8 @@ public:
     GPU(std::size_t blocksNum, std::size_t blockSize);
     GPU(const GPU& other);
     GPU& operator=(const GPU& other);
+    GPU(GPU&& other);
+    GPU& operator=(GPU&& other);  
     ~GPU();
 
     std::size_t availableSlots() const;
@@ -53,6 +55,7 @@ private:
     std::size_t getBlockSize() const;
     std::unordered_map<int, std::size_t> getReservs() const;
     std::size_t getReservatedBlocks() const;
+    void setNullPtrMemoryBlock(std::size_t slot);
 };
 
 #endif
