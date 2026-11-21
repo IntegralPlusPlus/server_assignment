@@ -38,9 +38,12 @@ class GenerativeRequest: public Request{
 private:
     std::string scriptedOutput;
     std::size_t maxOutputTokens;
+    std::vector<std::string> tokensOutput;
+    std::size_t tokensProcessed;
 public:
     GenerativeRequest(int id, const Model& model, int admissionCycle, std::string prompt, std::string scriptedOutput,
     std::size_t maxOutputTokens);
+    virtual bool finished() const;
 };
 
 class EmbeddingRequest: public Request{
