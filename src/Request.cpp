@@ -25,3 +25,9 @@ void Request::deallocateMemory(GPU &gpu)
         gpu.release(slot);
     }
 }
+
+Request::Request(const Request &other, const Model &newModel)
+    : id(other.id), model(newModel), admissionCycle(other.admissionCycle), tokens(other.tokens),
+      memoryBlocks(other.memoryBlocks), reservedBlocks(other.reservedBlocks)
+{
+}

@@ -12,6 +12,13 @@ GenerativeRequest::GenerativeRequest(int id, const Model &model, int admissionCy
 {
 }
 
+GenerativeRequest::GenerativeRequest(const GenerativeRequest &other, const Model &newModel)
+    : Request(other, newModel), scriptedOutput(other.scriptedOutput),
+      maxOutputTokens(other.maxOutputTokens), tokensOutput(other.tokensOutput),
+      tokensProcessed(other.tokensProcessed), prefix(other.prefix)
+{
+}
+
 bool GenerativeRequest::finished() const
 {
     return this->tokensProcessed ==
@@ -121,3 +128,8 @@ std::string GenerativeRequest::getOutput() const
 }
 
 std::size_t GenerativeRequest::getNeedToUnreserve() const { return this->reservedBlocks; }
+
+Request *GenerativeRequest::clone(const Model &model) const
+{
+    return new GenerativeRequest(*this, model);
+}
