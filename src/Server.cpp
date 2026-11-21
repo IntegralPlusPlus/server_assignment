@@ -21,8 +21,30 @@ Server::Server(std::string configPath) : policy(NULL), currentCycle(0)
         gpus.push_back(GPU(gpuConfig.memoryBytes / config.blockSize, config.blockSize));
     }
 
-    for (const RequestConfig requestConfig : config.requests)
+    for (const RequestConfig r : config.requests)
     {
+        Model *model = NULL;
+
+        for (Model *model_ : models)
+        {
+            if (model_->getId() == r.modelId)
+            {
+                model = model_;
+                break;
+            }
+        }
+
+        switch (r.type)
+        {
+        case RequestType::Generative:
+            nonSubmittedRequests.push_back(new GenerativeRequest(
+                r.id, *model, r.admissionCycle, r.prompt, r.scriptedOutput, r.maxOutputTokens));
+            break;
+        case RequestType::TextEmbedder:
+            nonSubmittedRequests.push_back(
+                new EmbeddingRequest(r.id, *model, r.admissionCycle, r.prompt));
+            break;
+        }
     }
 }
 

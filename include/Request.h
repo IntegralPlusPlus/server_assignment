@@ -65,9 +65,22 @@ class GenerativeRequest : public Request
 
 class EmbeddingRequest : public Request
 {
+  private:
+    std::size_t tokensProcessed = 0;
+    std::vector<int> result;
+
   public:
     EmbeddingRequest(int id, const Model &model, int admissionCycle, std::string prompt);
     virtual std::size_t getMaxNeededMemory() const override;
+    virtual std::size_t getNeededMemory(const GPU &gpu) const;
+    virtual std::vector<std::string> getCacheableTokens() const;
+    virtual bool finished() const;
+    virtual void allocateOneBlock(GPU &gpu, std::size_t slot) const;
+    virtual void reserveMemory(GPU &gpu);
+    virtual void act(GPU &gpu);
+    virtual std::string getOutput() const;
+    virtual std::size_t getNeedToUnreserve() const;
+    virtual Request *clone(const Model &model) const;
 };
 
 #endif
