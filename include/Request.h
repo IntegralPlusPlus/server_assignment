@@ -9,7 +9,7 @@ class GPU;
 
 class Request
 {
-protected:
+  protected:
     int id;
     const Model &model;
     int admissionCycle;
@@ -17,7 +17,7 @@ protected:
     std::vector<std::size_t> memoryBlocks;
     std::size_t reservedBlocks;
 
-public:
+  public:
     Request(int id, const Model &model, int admissionCycle, std::string prompt);
     virtual ~Request() = default;
     virtual std::size_t getNeededMemory(const GPU &gpu) const = 0;
@@ -38,27 +38,30 @@ public:
 
 class GenerativeRequest : public Request
 {
-private:
+  private:
     std::string scriptedOutput;
     std::size_t maxOutputTokens;
     std::vector<std::string> tokensOutput;
     std::size_t tokensProcessed;
     std::vector<std::string> prefix;
-public:
-    GenerativeRequest(int id, const Model &model, int admissionCycle, std::string prompt, std::string scriptedOutput,
-                      std::size_t maxOutputTokens);
+
+  public:
+    GenerativeRequest(int id, const Model &model, int admissionCycle, std::string prompt,
+                      std::string scriptedOutput, std::size_t maxOutputTokens);
     virtual bool finished() const;
     virtual std::vector<std::string> getCacheableTokens() const;
-    virtual void allocateOneBlock(GPU& gpu, std::size_t slot) const;
+    virtual void allocateOneBlock(GPU &gpu, std::size_t slot) const;
     virtual std::size_t getMaxNeededMemory() const;
-    virtual std::size_t getNeededMemory(const GPU& gpu) const;
-    virtual void reserveMemory(GPU& gpu);
-    virtual void act(GPU& gpu);
+    virtual std::size_t getNeededMemory(const GPU &gpu) const;
+    virtual void reserveMemory(GPU &gpu);
+    virtual void act(GPU &gpu);
+    virtual std::string getOutput() const;
+    virtual std::size_t getNeedToUnreserve() const;
 };
 
 class EmbeddingRequest : public Request
 {
-public:
+  public:
     EmbeddingRequest(int id, const Model &model, int admissionCycle, std::string prompt);
     virtual std::size_t getMaxNeededMemory() const override;
 };
