@@ -109,6 +109,6 @@ std::size_t Model::getEmbeddingSize() const {
     return this->embeddingSize;
 }
 
-std::string Model::getModelId() const {
+std::string Model::getId() const {
     return this->modelId;
 }

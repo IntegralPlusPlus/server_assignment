@@ -15,7 +15,7 @@ public:
     Model(const std::string& id, std::size_t embeddingSize);
     void generateTokenEmbedding(const std::vector<std::string>&, GPU&, size_t, size_t) const;
     std::size_t getEmbeddingSize() const;
-    std::string getModelId() const;
+    std::string getId() const;
 private:
     std::string modelId;
     std::size_t embeddingSize;

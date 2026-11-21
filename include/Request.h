@@ -40,6 +40,7 @@ private:
     std::size_t maxOutputTokens;
     std::vector<std::string> tokensOutput;
     std::size_t tokensProcessed;
+    std::vector<std::string> prefix;
 public:
     GenerativeRequest(int id, const Model& model, int admissionCycle, std::string prompt, std::string scriptedOutput,
     std::size_t maxOutputTokens);
@@ -48,6 +49,8 @@ public:
     virtual void allocateOneBlock(GPU& gpu, std::size_t slot) const;
     virtual std::size_t getMaxNeededMemory() const;
     virtual std::size_t getNeededMemory(const GPU& gpu) const;
+    virtual void reserveMemory(GPU& gpu);
+    virtual void act(GPU& gpu);
 };
 
 class EmbeddingRequest: public Request{

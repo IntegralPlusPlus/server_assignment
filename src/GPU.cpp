@@ -359,3 +359,7 @@ std::size_t GPU::getCacheHits() const {
 std::size_t GPU::getEvictions() const {
     return this->evictions;
 }
+
+std::size_t GPU::getBlockSize() const {
+    return this->blockSize;
+}

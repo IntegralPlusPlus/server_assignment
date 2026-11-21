@@ -44,6 +44,7 @@ public:
     void acquireCacheHits(const PrefixMatch& prefix);
     std::size_t getCacheHits() const;
     std::size_t getEvictions() const;
+    std::size_t getBlockSize() const;
 private:
     std::size_t blocksNum;
     std::size_t blockSize;
