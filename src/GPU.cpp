@@ -8,28 +8,32 @@ PrefixMatch::PrefixMatch():
 GPU::GPU(std::size_t blocksNum, std::size_t blockSize):
         blocksNum(blocksNum), 
         blockSize(blockSize),
-        reservatedBlocks(0)  {
+        reservatedBlocks(0),
+        cache_hits(0),
+        evictions(0) {
     this->memory.resize(blocksNum);
     this->prefixes.resize(blocksNum);
 }
 
 GPU::GPU(const GPU& other):
-        blocksNum(other.getBlocksNum()),
-        blockSize(other.getBlockSize()),
-        reservs(other.getReservs()),
-        reservatedBlocks(other.getReservatedBlocks()) {
+        blocksNum(other.blocksNum),
+        blockSize(other.blockSize),
+        reservs(other.reservs),
+        reservatedBlocks(other.reservatedBlocks),
+        cache_hits(other.cache_hits),
+        evictions(other.evictions) {
     this->memory.resize(this->blocksNum);
     this->prefixes.resize(this->blocksNum);
 
     for (std::size_t slot = 0; slot < this->blocksNum; ++slot) {
-        if (other.getMemoryBlock(slot) != nullptr) {
-            this->memory[slot] = other.getMemoryBlock(slot)->clone();
-            this->memory[slot]->setRefCount(other.getMemoryBlock(slot)->getRefCount());
+        if (other.memory[slot] != nullptr) {
+            this->memory[slot] = other.memory[slot]->clone();
+            this->memory[slot]->setRefCount(other.memory[slot]->getRefCount());
         } else {
             this->memory[slot] = nullptr;
         }
 
-        this->prefixes[slot] = other.getPrefix(slot);
+        this->prefixes[slot] = other.prefixes[slot];
     }
 }
 
@@ -38,10 +42,12 @@ GPU& GPU::operator=(const GPU& other) {
         return *this;
     }
 
-    this->blocksNum = other.getBlocksNum();
-    this->blockSize = other.getBlockSize();
-    this->reservs = other.getReservs();
-    this->reservatedBlocks = other.getReservatedBlocks();
+    this->blocksNum = other.blocksNum;
+    this->blockSize = other.blockSize;
+    this->reservs = other.reservs;
+    this->reservatedBlocks = other.reservatedBlocks;
+    this->cache_hits = other.cache_hits;
+    this->evictions = other.evictions;
 
     for (auto* block : this->memory) {
         delete block;
@@ -53,14 +59,14 @@ GPU& GPU::operator=(const GPU& other) {
     this->prefixes.resize(this->blocksNum);
 
     for (std::size_t slot = 0; slot < this->blocksNum; ++slot) {
-        if (other.getMemoryBlock(slot) != nullptr) {
-            this->memory[slot] = other.getMemoryBlock(slot)->clone();
-            this->memory[slot]->setRefCount(other.getMemoryBlock(slot)->getRefCount());
+        if (other.memory[slot] != nullptr) {
+            this->memory[slot] = other.memory[slot]->clone();
+            this->memory[slot]->setRefCount(other.memory[slot]->getRefCount());
         } else {
             this->memory[slot] = nullptr;
         }
 
-        this->prefixes[slot] = other.getPrefix(slot);
+        this->prefixes[slot] = other.prefixes[slot];
     }
 
     return *this;
@@ -70,7 +76,9 @@ GPU::GPU(GPU&& other):
         blocksNum(other.blocksNum),
         blockSize(other.blockSize),
         reservs(other.reservs),
-        reservatedBlocks(other.reservatedBlocks) {
+        reservatedBlocks(other.reservatedBlocks),
+        cache_hits(other.cache_hits),
+        evictions(other.evictions) {
     this->memory.resize(this->blocksNum);
     this->prefixes.resize(this->blocksNum);
 
@@ -98,6 +106,8 @@ GPU& GPU::operator=(GPU&& other) {
     this->blockSize = other.blockSize;
     this->reservs = other.reservs;
     this->reservatedBlocks = other.reservatedBlocks;
+    this->cache_hits = other.cache_hits;
+    this->evictions = other.evictions;
 
     for (auto* block : this->memory) {
         delete block;
@@ -194,6 +204,7 @@ std::size_t GPU::allocateBlock(const Request& request) {
         slot = lowestIdle;
         delete this->memory[slot];
         this->prefixes[slot] = {};
+        this->evictions++;
     }
 
     request.allocateOneBlock(*this, slot);
@@ -265,6 +276,10 @@ PrefixMatch GPU::findLongestCachedPrefix(const std::string& modelId, std::size_t
     return prefix;
 }
 
+void GPU::acquireCacheHits(const PrefixMatch& prefix) {
+    this->cache_hits += prefix.blockIds.size();
+}
+
 void GPU::acquire(std::size_t slot) {
     this->memory[slot]->acquire();
 }
@@ -288,37 +303,9 @@ void GPU::release(std::size_t slot) {
     }
 }
 
-std::pair<std::vector<std::string>, std::string> GPU::getPrefix(std::size_t slot) const {
-    return this->prefixes[slot];
-}
-
-MemoryBlock* GPU::getMemoryBlock(std::size_t slot) const {
-    return this->memory[slot];
-}
-
-std::size_t GPU::getBlocksNum() const {
-    return this->blocksNum;
-}
-
-std::size_t GPU::getBlockSize() const {
-    return this->blockSize;
-}
-
-std::unordered_map<int, std::size_t> GPU::getReservs() const {
-    return this->reservs;
-}
-
-std::size_t GPU::getReservatedBlocks() const {
-    return this->reservatedBlocks;
-}
-
-void GPU::setNullPtrMemoryBlock(std::size_t slot) {
-    this->memory[slot] = nullptr;
-}
-
 void GPU::copyMemoryFromOtherGPU(const GPU& other, const std::vector<std::size_t>& blocks) {
     for (auto blockCopy : blocks) {
-        std::pair<std::vector<std::string>, std::string> prefix = other.getPrefix(blockCopy);
+        std::pair<std::vector<std::string>, std::string> prefix = other.prefixes[blockCopy];
 
         std::size_t slot = 0, lowestNull = this->blocksNum + 1, lowestInactive = this->blocksNum + 1;
         bool slotFound = false;
@@ -336,7 +323,7 @@ void GPU::copyMemoryFromOtherGPU(const GPU& other, const std::vector<std::size_t
                 // defends against inserts
                 bool updateLowest = true;
                 for (auto sourceSlot : blocks) {
-                    if (this->prefixes[slot] == other.getPrefix(sourceSlot)) {
+                    if (this->prefixes[slot] == other.prefixes[sourceSlot]) {
                         updateLowest = false;
                         break;
                     }
@@ -349,17 +336,26 @@ void GPU::copyMemoryFromOtherGPU(const GPU& other, const std::vector<std::size_t
         if (slotFound) {
             continue;
         } else {
-            MemoryBlock* copy = other.getMemoryBlock(blockCopy)->clone();
+            MemoryBlock* copy = other.memory[blockCopy]->clone();
             std::size_t lowestInd;
             if (lowestNull != this->blocksNum + 1) {
                 lowestInd = lowestNull;
             } else {
                 lowestInd = lowestInactive;
                 delete this->memory[lowestInactive];
+                this->evictions++;
             }
 
             this->prefixes[lowestInd] = prefix;
             this->memory[lowestInd] = copy;
         }
     }
+}
+
+std::size_t GPU::getCacheHits() const {
+    return this->cache_hits;
+}
+
+std::size_t GPU::getEvictions() const {
+    return this->evictions;
 }

@@ -41,6 +41,9 @@ public:
     void writeToBlock(std::size_t blockId, std::size_t offset, int value);
     PrefixMatch findLongestCachedPrefix(const std::string& modelId, std::size_t embeddingSize,
                                         const std::vector<std::string>& promptTokens) const;
+    void acquireCacheHits(const PrefixMatch& prefix);
+    std::size_t getCacheHits() const;
+    std::size_t getEvictions() const;
 private:
     std::size_t blocksNum;
     std::size_t blockSize;
@@ -48,14 +51,8 @@ private:
     std::unordered_map<int, std::size_t> reservs;
     std::size_t reservatedBlocks;
     std::vector<std::pair<std::vector<std::string>, std::string> > prefixes;
-
-    std::pair<std::vector<std::string>, std::string> getPrefix(std::size_t slot) const;
-    MemoryBlock* getMemoryBlock(std::size_t slot) const;
-    std::size_t getBlocksNum() const;
-    std::size_t getBlockSize() const;
-    std::unordered_map<int, std::size_t> getReservs() const;
-    std::size_t getReservatedBlocks() const;
-    void setNullPtrMemoryBlock(std::size_t slot);
+    std::size_t cache_hits;
+    std::size_t evictions;
 };
 
 #endif
